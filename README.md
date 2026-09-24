@@ -9,7 +9,7 @@
 **Une application web interactive pour analyser les données démographiques mondiales en temps réel.**
 Explorez la répartition par âge, l'espérance de vie, la fertilité, et la croissance démographique par continent et pays grâce à des visualisations dynamiques et un design responsive.
 
-🔗 **[Voir la démo en direct](https://ton-utilisateur.github.io/world-demographics-explorer/)** *(à remplir après le déploiement)*
+🔗 **[Voir la démo en direct](https://SaggioVecchino.github.io/demographics-dashboard/)**
 
 ---
 
@@ -43,5 +43,5 @@ Explorez la répartition par âge, l'espérance de vie, la fertilité, et la cro
 
 ### 1️⃣ Cloner le dépôt
 ```bash
-git clone https://github.com/ton-utilisateur/world-demographics-explorer.git
+git clone https://github.com/SaggioVecchino/demographics-dashboard.git
 cd world-demographics-explorer
