@@ -1,7 +1,7 @@
-# 🌍 World Demographics Explorer
+# 🌍 Demographics dashboard
 
-![GitHub last commit](https://img.shields.io/github/last-commit/ton-utilisateur/world-demographics-explorer)
-![GitHub stars](https://img.shields.io/github/stars/ton-utilisateur/world-demographics-explorer?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/ton-utilisateur/demographics-dashboard)
+![GitHub stars](https://img.shields.io/github/stars/ton-utilisateur/demographics-dashboard?style=social)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ---
