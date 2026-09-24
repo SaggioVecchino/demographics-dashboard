@@ -1,15 +1,13 @@
 # 🌍 Demographics dashboard
 
-![GitHub last commit](https://img.shields.io/github/last-commit/ton-utilisateur/demographics-dashboard)
-![GitHub stars](https://img.shields.io/github/stars/ton-utilisateur/demographics-dashboard?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/SaggioVecchino/demographics-dashboard)
+![GitHub stars](https://img.shields.io/github/stars/SaggioVecchino/demographics-dashboard?style=social)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ---
 
 **Une application web interactive pour analyser les données démographiques mondiales en temps réel.**
 Explorez la répartition par âge, l'espérance de vie, la fertilité, et la croissance démographique par continent et pays grâce à des visualisations dynamiques et un design responsive.
-
-🔗 **[Voir la démo en direct](https://SaggioVecchino.github.io/demographics-dashboard/)**
 
 ---
 
