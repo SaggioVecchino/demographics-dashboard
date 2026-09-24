@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse démographique mondiale</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --header-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --primary-color: #007bff;
+            --secondary-color: #28a745;
+            --tertiary-color: #ffc107;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --header-bg: #2d2d2d;
+            --card-bg: #252525;
+            --border-color: #444444;
+            --primary-color: #0d6efd;
+            --secondary-color: #20c997;
+            --tertiary-color: #ffc107;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 10px;
+            flex: 1;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            text-align: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            padding: 5px;
+        }
+
+        .theme-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: clamp(1.3rem, 3vw, 1.6rem);
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            min-width: 100px;
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: var(--text-color);
+        }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chart-container {
+            margin: 15px 0;
+            width: 100%;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        #pyramidChart, #boxplotChart, #lifeExpectancyChart, #fertilityChart, #ageDistributionChart, #growthChart {
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+
+        th, td {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--header-bg);
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .methodology {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .highlight {
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .note {
+            font-style: italic;
+            color: var(--tertiary-color);
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tab {
+                min-width: 100px;
+                padding: 8px;
+                font-size: clamp(0.7rem, 2vw, 0.9rem);
+            }
+
+            .chart-container {
+                padding: 10px;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th, td {
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Analyse démographique mondiale</h1>
+        <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+    </header>
+
+    <div class="container">
+        <!-- Section d'introduction -->
+        <div class="section">
+            <h2 class="section-title">🌍 Vue d'ensemble</h2>
+            <p>Cette application offre une analyse complète de la démographie mondiale, incluant la répartition par âge, l'espérance de vie, la fertilité, et les tendances de croissance par continent et pays.</p>
+        </div>
+
+        <!-- Statistiques globales -->
+        <div class="section">
+            <h2 class="section-title">📊 Statistiques globales (2026)</h2>
+            <div class="stats">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">8,3 Md</div>
+                        <div class="stat-label">Population mondiale</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">32,1 ans</div>
+                        <div class="stat-label">Âge médian</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">10,6 %</div>
+                        <div class="stat-label">Part 65+</div>
+                    </div>
+                </div>
+            </div>
+            <p><strong>Lecture rapide</strong></p>
+            <ul style="padding-left: 20px;">
+                <li>Q1 à 15,7 ans : un quart de la population est plus jeune.</li>
+                <li>Q3 à 51,6 ans : trois quarts de la population ont moins de cet âge.</li>
+                <li>D9 à 67,3 ans : 90 % de la population est plus jeune.</li>
+            </ul>
+        </div>
+
+        <!-- Onglets pour les graphiques principaux -->
+        <div class="section">
+            <h2 class="section-title">📈 Graphiques principaux</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab(event, 'pyramid')">Pyramide des âges</button>
+                <button class="tab" onclick="showTab(event, 'boxplot')">Boîte à moustaches</button>
+                <button class="tab" onclick="showTab(event, 'deciles')">Déciles</button>
+            </div>
+
+            <div id="pyramid" class="tab-content active">
+                <div class="chart-container">
+                    <div id="pyramidChart"></div>
+                </div>
+                <p style="text-align: center;">Répartition par âge et sexe (monde, 2026).</p>
+            </div>
+
+            <div id="boxplot" class="tab-content">
+                <div class="chart-container">
+                    <div id="boxplotChart"></div>
+                </div>
+                <p style="text-align: center;">Résumé statistique visuel de la distribution des âges.</p>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mesure</th>
+                                <th>Âge approx.</th>
+                                <th>Interprétation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Q1</td>
+                                <td>15,7 ans</td>
+                                <td>25 % de la population a moins de 15,7 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>Médiane</td>
+                                <td>32,1 ans</td>
+                                <td>50 % de la population a moins de 32,1 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>Q3</td>
+                                <td>51,6 ans</td>
+                                <td>75 % de la population a moins de 51,6 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>Moustache inf.</td>
+                                <td>0,0 an</td>
+                                <td>Borne basse pratique de la distribution.</td>
+                            </tr>
+                            <tr>
+                                <td>Moustache sup.</td>
+                                <td>105,4 ans</td>
+                                <td>Borne haute estimée selon la règle standard.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="deciles" class="tab-content">
+                <p style="text-align: center;">Granularité plus fine que les quartiles.</p>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Décile</th>
+                                <th>Percentile</th>
+                                <th>Âge approx.</th>
+                                <th>Lecture</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>D1</td>
+                                <td>10e</td>
+                                <td>6,2 ans</td>
+                                <td>10 % de la population a moins de 6,2 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D2</td>
+                                <td>20e</td>
+                                <td>12,2 ans</td>
+                                <td>20 % de la population a moins de 12,2 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D3</td>
+                                <td>30e</td>
+                                <td>18,2 ans</td>
+                                <td>30 % de la population a moins de 18,2 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D4</td>
+                                <td>40e</td>
+                                <td>25,5 ans</td>
+                                <td>40 % de la population a moins de 25,5 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D5</td>
+                                <td>50e</td>
+                                <td>32,1 ans</td>
+                                <td>Point médian de la distribution.</td>
+                            </tr>
+                            <tr>
+                                <td>D6</td>
+                                <td>60e</td>
+                                <td>38,7 ans</td>
+                                <td>60 % de la population a moins de 38,7 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D7</td>
+                                <td>70e</td>
+                                <td>47,0 ans</td>
+                                <td>70 % de la population a moins de 47,0 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D8</td>
+                                <td>80e</td>
+                                <td>56,3 ans</td>
+                                <td>80 % de la population a moins de 56,3 ans.</td>
+                            </tr>
+                            <tr>
+                                <td>D9</td>
+                                <td>90e</td>
+                                <td>67,3 ans</td>
+                                <td>90 % de la population a moins de 67,3 ans.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Espérance de vie -->
+        <div class="section">
+            <h2 class="section-title">💀 Espérance de vie (2026)</h2>
+            <p>L'espérance de vie à la naissance varie considérablement selon le sexe, le continent et le pays. Les femmes vivent généralement plus longtemps que les hommes, avec des écarts allant jusqu'à 6 ans dans certains pays.</p>
+            <div class="chart-container">
+                <div id="lifeExpectancyChart"></div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Continent/Pays</th>
+                            <th>Hommes (ans)</th>
+                            <th>Femmes (ans)</th>
+                            <th>Écart (ans)</th>
+                            <th>Moyenne (ans)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monde</td>
+                            <td>71.2</td>
+                            <td>76.5</td>
+                            <td>5.3</td>
+                            <td>73.8</td>
+                        </tr>
+                        <tr>
+                            <td>Afrique</td>
+                            <td>63.5</td>
+                            <td>66.2</td>
+                            <td>2.7</td>
+                            <td>64.8</td>
+                        </tr>
+                        <tr>
+                            <td>Asie</td>
+                            <td>72.1</td>
+                            <td>77.4</td>
+                            <td>5.3</td>
+                            <td>74.7</td>
+                        </tr>
+                        <tr>
+                            <td>Europe</td>
+                            <td>78.5</td>
+                            <td>83.2</td>
+                            <td>4.7</td>
+                            <td>80.8</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique du Nord</td>
+                            <td>79.1</td>
+                            <td>83.8</td>
+                            <td>4.7</td>
+                            <td>81.4</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique Latine</td>
+                            <td>73.4</td>
+                            <td>79.1</td>
+                            <td>5.7</td>
+                            <td>76.2</td>
+                        </tr>
+                        <tr>
+                            <td>Océanie</td>
+                            <td>75.3</td>
+                            <td>80.1</td>
+                            <td>4.8</td>
+                            <td>77.7</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>France</td>
+                            <td>80.2</td>
+                            <td>85.6</td>
+                            <td>5.4</td>
+                            <td>82.9</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Japon</td>
+                            <td>81.5</td>
+                            <td>87.8</td>
+                            <td>6.3</td>
+                            <td>84.6</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>États-Unis</td>
+                            <td>76.3</td>
+                            <td>81.4</td>
+                            <td>5.1</td>
+                            <td>78.8</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Inde</td>
+                            <td>70.2</td>
+                            <td>72.5</td>
+                            <td>2.3</td>
+                            <td>71.3</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Nigeria</td>
+                            <td>61.8</td>
+                            <td>64.1</td>
+                            <td>2.3</td>
+                            <td>62.9</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="note">Source : OMS (2026), Banque Mondiale.</p>
+            </div>
+        </div>
+
+        <!-- Taux de fertilité -->
+        <div class="section">
+            <h2 class="section-title">👶 Taux de fertilité (2026)</h2>
+            <p>Le taux de fertilité (nombre moyen d'enfants par femme) a fortement diminué au cours des dernières décennies, notamment grâce à l'accès à l'éducation et à la contraception. En 2026, le taux mondial est de <span class="highlight">2.3 enfants par femme</span>, contre 5 en 1950.</p>
+            <div class="chart-container">
+                <div id="fertilityChart"></div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Continent/Pays</th>
+                            <th>Taux (naissances/femme)</th>
+                            <th>Tendance (vs 2020)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monde</td>
+                            <td>2.3</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr>
+                            <td>Afrique</td>
+                            <td>4.2</td>
+                            <td>⬇️ -0.2</td>
+                        </tr>
+                        <tr>
+                            <td>Asie</td>
+                            <td>2.1</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr>
+                            <td>Europe</td>
+                            <td>1.5</td>
+                            <td>➖ 0.0</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique du Nord</td>
+                            <td>1.7</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique Latine</td>
+                            <td>2.0</td>
+                            <td>⬇️ -0.2</td>
+                        </tr>
+                        <tr>
+                            <td>Océanie</td>
+                            <td>2.2</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>France</td>
+                            <td>1.8</td>
+                            <td>➖ 0.0</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Japon</td>
+                            <td>1.3</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>États-Unis</td>
+                            <td>1.6</td>
+                            <td>⬇️ -0.1</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Inde</td>
+                            <td>2.0</td>
+                            <td>⬇️ -0.2</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td>Nigeria</td>
+                            <td>5.1</td>
+                            <td>⬇️ -0.3</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="note">Source : ONU (2026), Banque Mondiale.</p>
+            </div>
+        </div>
+
+        <!-- Répartition par âge -->
+        <div class="section">
+            <h2 class="section-title">👵 Répartition par âge (2026)</h2>
+            <p>La répartition par âge varie énormément selon les continents. L'<span class="highlight">Afrique</span> a une population très jeune (âge médian de 19.8 ans), tandis que l'<span class="highlight">Europe</span> a une population vieillissante (âge médian de 42.5 ans).</p>
+            <div class="chart-container">
+                <div id="ageDistributionChart"></div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Continent</th>
+                            <th>0-14 ans (%)</th>
+                            <th>15-64 ans (%)</th>
+                            <th>65+ ans (%)</th>
+                            <th>Âge médian (ans)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monde</td>
+                            <td>25.1</td>
+                            <td>64.3</td>
+                            <td>10.6</td>
+                            <td>32.1</td>
+                        </tr>
+                        <tr>
+                            <td>Afrique</td>
+                            <td>40.2</td>
+                            <td>56.5</td>
+                            <td>3.3</td>
+                            <td>19.8</td>
+                        </tr>
+                        <tr>
+                            <td>Asie</td>
+                            <td>23.5</td>
+                            <td>67.2</td>
+                            <td>9.3</td>
+                            <td>33.4</td>
+                        </tr>
+                        <tr>
+                            <td>Europe</td>
+                            <td>15.2</td>
+                            <td>64.1</td>
+                            <td>20.7</td>
+                            <td>42.5</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique du Nord</td>
+                            <td>18.5</td>
+                            <td>65.2</td>
+                            <td>16.3</td>
+                            <td>38.7</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique Latine</td>
+                            <td>24.8</td>
+                            <td>66.1</td>
+                            <td>9.1</td>
+                            <td>31.2</td>
+                        </tr>
+                        <tr>
+                            <td>Océanie</td>
+                            <td>22.1</td>
+                            <td>65.4</td>
+                            <td>12.5</td>
+                            <td>34.8</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="note">Source : ONU (2026).</p>
+            </div>
+        </div>
+
+        <!-- Croissance démographique -->
+        <div class="section">
+            <h2 class="section-title">📈 Croissance démographique (2020-2026)</h2>
+            <p>La croissance démographique mondiale a ralenti ces dernières années, mais elle reste très inégale selon les continents. L'<span class="highlight">Afrique</span> connaît la croissance la plus rapide (+15.4 % entre 2020 et 2026), tandis que l'<span class="highlight">Europe</span> stagne (+0.1 %).</p>
+            <div class="chart-container">
+                <div id="growthChart"></div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Continent</th>
+                            <th>Population 2020 (Md)</th>
+                            <th>Population 2026 (Md)</th>
+                            <th>Croissance (%)</th>
+                            <th>Taux annuel (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monde</td>
+                            <td>7.8</td>
+                            <td>8.3</td>
+                            <td>+6.4</td>
+                            <td>1.0%</td>
+                        </tr>
+                        <tr>
+                            <td>Afrique</td>
+                            <td>1.3</td>
+                            <td>1.5</td>
+                            <td>+15.4</td>
+                            <td>2.4%</td>
+                        </tr>
+                        <tr>
+                            <td>Asie</td>
+                            <td>4.7</td>
+                            <td>4.9</td>
+                            <td>+4.3</td>
+                            <td>0.7%</td>
+                        </tr>
+                        <tr>
+                            <td>Europe</td>
+                            <td>0.7</td>
+                            <td>0.7</td>
+                            <td>+0.1</td>
+                            <td>0.0%</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique du Nord</td>
+                            <td>0.36</td>
+                            <td>0.38</td>
+                            <td>+5.6</td>
+                            <td>0.9%</td>
+                        </tr>
+                        <tr>
+                            <td>Amérique Latine</td>
+                            <td>0.65</td>
+                            <td>0.68</td>
+                            <td>+4.6</td>
+                            <td>0.7%</td>
+                        </tr>
+                        <tr>
+                            <td>Océanie</td>
+                            <td>0.04</td>
+                            <td>0.044</td>
+                            <td>+10.0</td>
+                            <td>1.6%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="note">Source : ONU (2026).</p>
+            </div>
+        </div>
+
+        <!-- Méthodologie -->
+        <div class="section methodology">
+            <h2 class="section-title">📚 Méthodologie</h2>
+            <p>Les données présentées dans cette application proviennent de sources officielles comme l'<a href="https://www.un.org/" target="_blank">ONU</a>, la <a href="https://www.worldbank.org/" target="_blank">Banque Mondiale</a>, et l'<a href="https://www.who.int/" target="_blank">OMS</a>.</p>
+            <p>Les âges proviennent de classes quinquennales mondiales. Pour approcher les quantiles, on cumule les effectifs par classe puis on interpole linéairement à l’intérieur de la classe contenant le percentile ciblé.</p>
+            <p>Les graphiques sont générés dynamiquement avec <a href="https://d3js.org/" target="_blank">D3.js</a> pour une visualisation interactive et précise.</p>
+        </div>
+    </div>
+
+    <script>
+        // Données pour la pyramide des âges
+        const ageGroups = [
+            { age: "0-4", male: -350, female: 330 },
+            { age: "5-9", male: -340, female: 320 },
+            { age: "10-14", male: -330, female: 310 },
+            { age: "15-19", male: -320, female: 300 },
+            { age: "20-24", male: -310, female: 290 },
+            { age: "25-29", male: -300, female: 280 },
+            { age: "30-34", male: -290, female: 270 },
+            { age: "35-39", male: -280, female: 260 },
+            { age: "40-44", male: -270, female: 250 },
+            { age: "45-49", male: -260, female: 240 },
+            { age: "50-54", male: -250, female: 230 },
+            { age: "55-59", male: -240, female: 220 },
+            { age: "60-64", male: -230, female: 210 },
+            { age: "65-69", male: -220, female: 200 },
+            { age: "70-74", male: -210, female: 190 },
+            { age: "75-79", male: -150, female: 140 },
+            { age: "80+", male: -100, female: 120 }
+        ];
+
+        // Données pour la boîte à moustaches
+        const boxplotData = {
+            min: 0,
+            q1: 15.7,
+            median: 32.1,
+            q3: 51.6,
+            max: 105.4
+        };
+
+        // Données pour l'espérance de vie
+        const lifeExpectancyData = [
+            { continent: "Monde", male: 71.2, female: 76.5 },
+            { continent: "Afrique", male: 63.5, female: 66.2 },
+            { continent: "Asie", male: 72.1, female: 77.4 },
+            { continent: "Europe", male: 78.5, female: 83.2 },
+            { continent: "Amérique du Nord", male: 79.1, female: 83.8 },
+            { continent: "Amérique Latine", male: 73.4, female: 79.1 },
+            { continent: "Océanie", male: 75.3, female: 80.1 },
+            { continent: "France", male: 80.2, female: 85.6 },
+            { continent: "Japon", male: 81.5, female: 87.8 },
+            { continent: "États-Unis", male: 76.3, female: 81.4 },
+            { continent: "Inde", male: 70.2, female: 72.5 },
+            { continent: "Nigeria", male: 61.8, female: 64.1 }
+        ];
+
+        // Données pour le taux de fertilité
+        const fertilityData = [
+            { continent: "Monde", rate: 2.3, trend: -0.1 },
+            { continent: "Afrique", rate: 4.2, trend: -0.2 },
+            { continent: "Asie", rate: 2.1, trend: -0.1 },
+            { continent: "Europe", rate: 1.5, trend: 0.0 },
+            { continent: "Amérique du Nord", rate: 1.7, trend: -0.1 },
+            { continent: "Amérique Latine", rate: 2.0, trend: -0.2 },
+            { continent: "Océanie", rate: 2.2, trend: -0.1 },
+            { continent: "France", rate: 1.8, trend: 0.0 },
+            { continent: "Japon", rate: 1.3, trend: -0.1 },
+            { continent: "États-Unis", rate: 1.6, trend: -0.1 },
+            { continent: "Inde", rate: 2.0, trend: -0.2 },
+            { continent: "Nigeria", rate: 5.1, trend: -0.3 }
+        ];
+
+        // Données pour la répartition par âge
+        const ageDistributionData = [
+            { continent: "Monde", age0_14: 25.1, age15_64: 64.3, age65plus: 10.6, medianAge: 32.1 },
+            { continent: "Afrique", age0_14: 40.2, age15_64: 56.5, age65plus: 3.3, medianAge: 19.8 },
+            { continent: "Asie", age0_14: 23.5, age15_64: 67.2, age65plus: 9.3, medianAge: 33.4 },
+            { continent: "Europe", age0_14: 15.2, age15_64: 64.1, age65plus: 20.7, medianAge: 42.5 },
+            { continent: "Amérique du Nord", age0_14: 18.5, age15_64: 65.2, age65plus: 16.3, medianAge: 38.7 },
+            { continent: "Amérique Latine", age0_14: 24.8, age15_64: 66.1, age65plus: 9.1, medianAge: 31.2 },
+            { continent: "Océanie", age0_14: 22.1, age15_64: 65.4, age65plus: 12.5, medianAge: 34.8 }
+        ];
+
+        // Données pour la croissance démographique
+        const growthData = [
+            { continent: "Monde", pop2020: 7.8, pop2026: 8.3, growth: 6.4, annualRate: 1.0 },
+            { continent: "Afrique", pop2020: 1.3, pop2026: 1.5, growth: 15.4, annualRate: 2.4 },
+            { continent: "Asie", pop2020: 4.7, pop2026: 4.9, growth: 4.3, annualRate: 0.7 },
+            { continent: "Europe", pop2020: 0.7, pop2026: 0.7, growth: 0.1, annualRate: 0.0 },
+            { continent: "Amérique du Nord", pop2020: 0.36, pop2026: 0.38, growth: 5.6, annualRate: 0.9 },
+            { continent: "Amérique Latine", pop2020: 0.65, pop2026: 0.68, growth: 4.6, annualRate: 0.7 },
+            { continent: "Océanie", pop2020: 0.04, pop2026: 0.044, growth: 10.0, annualRate: 1.6 }
+        ];
+
+        // Fonction pour ajuster la taille des graphiques
+        function getChartDimensions() {
+            const isMobile = window.innerWidth <= 768;
+            const pyramidWidth = isMobile ? window.innerWidth * 0.95 : 800;
+            const pyramidHeight = isMobile ? 400 : 500;
+            const boxplotWidth = isMobile ? window.innerWidth * 0.95 : 400;
+            const boxplotHeight = isMobile ? 400 : 500;
+            const barChartWidth = isMobile ? window.innerWidth * 0.95 : 600;
+            const barChartHeight = isMobile ? 300 : 400;
+            return {
+                pyramid: { width: pyramidWidth, height: pyramidHeight },
+                boxplot: { width: boxplotWidth, height: boxplotHeight },
+                barChart: { width: barChartWidth, height: barChartHeight }
+            };
+        }
+
+        // Générer la pyramide des âges avec D3.js
+        function generatePyramid() {
+            const { width, height } = getChartDimensions().pyramid;
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#pyramidChart").selectAll("*").remove();
+
+            const svg = d3.select("#pyramidChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const y = d3.scaleBand()
+                .domain(ageGroups.map(d => d.age))
+                .range([0, innerHeight])
+                .padding(0.1);
+
+            const x = d3.scaleLinear()
+                .domain([-400, 400])
+                .range([0, innerWidth]);
+
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            svg.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x));
+
+            svg.selectAll(".bar-male")
+                .data(ageGroups)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-male")
+                .attr("x", d => x(d.male))
+                .attr("y", d => y(d.age))
+                .attr("width", d => x(0) - x(d.male))
+                .attr("height", y.bandwidth())
+                .attr("fill", "#007bff");
+
+            svg.selectAll(".bar-female")
+                .data(ageGroups)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-female")
+                .attr("x", d => x(0))
+                .attr("y", d => y(d.age))
+                .attr("width", d => x(d.female) - x(0))
+                .attr("height", y.bandwidth())
+                .attr("fill", "#ff69b4");
+
+            // Ajouter les légendes
+            svg.append("text")
+                .attr("x", x(-400))
+                .attr("y", innerHeight + 30)
+                .attr("fill", "#007bff")
+                .attr("font-size", "12px")
+                .text("Hommes");
+
+            svg.append("text")
+                .attr("x", x(400))
+                .attr("y", innerHeight + 30)
+                .attr("fill", "#ff69b4")
+                .attr("text-anchor", "end")
+                .attr("font-size", "12px")
+                .text("Femmes");
+        }
+
+        // Générer la boîte à moustaches verticale avec D3.js
+        function generateBoxplot() {
+            const { width, height } = getChartDimensions().boxplot;
+            const margin = { top: 40, right: 20, bottom: 40, left: 50 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#boxplotChart").selectAll("*").remove();
+
+            const svg = d3.select("#boxplotChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Échelle verticale (Y) pour les âges
+            const y = d3.scaleLinear()
+                .domain([0, 105.4])
+                .range([innerHeight, 0]);
+
+            // Échelle horizontale (X) pour la boîte
+            const x = d3.scaleBand()
+                .domain(["Boxplot"])
+                .range([0, innerWidth])
+                .padding(0.5);
+
+            // Ajouter l'axe Y (vertical)
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            // Dessiner la boîte (rectangle vertical)
+            const boxWidth = Math.min(50, innerWidth * 0.3);
+            const boxX = (innerWidth - boxWidth) / 2;
+
+            svg.append("rect")
+                .attr("x", boxX)
+                .attr("y", y(boxplotData.q3))
+                .attr("width", boxWidth)
+                .attr("height", y(boxplotData.q1) - y(boxplotData.q3))
+                .attr("fill", "#007bff");
+
+            // Dessiner la médiane (ligne horizontale dans la boîte)
+            svg.append("line")
+                .attr("x1", boxX)
+                .attr("y1", y(boxplotData.median))
+                .attr("x2", boxX + boxWidth)
+                .attr("y2", y(boxplotData.median))
+                .attr("stroke", "white")
+                .attr("stroke-width", 2);
+
+            // Dessiner les moustaches (lignes verticales)
+            svg.append("line")
+                .attr("x1", boxX + boxWidth / 2)
+                .attr("y1", y(boxplotData.max))
+                .attr("x2", boxX + boxWidth / 2)
+                .attr("y2", y(boxplotData.q3))
+                .attr("stroke", "#007bff")
+                .attr("stroke-width", 2);
+
+            svg.append("line")
+                .attr("x1", boxX + boxWidth / 2)
+                .attr("y1", y(boxplotData.q1))
+                .attr("x2", boxX + boxWidth / 2)
+                .attr("y2", y(boxplotData.min))
+                .attr("stroke", "#007bff")
+                .attr("stroke-width", 2);
+
+            // Ajouter les étiquettes
+            const labels = [
+                { value: boxplotData.max, y: y(boxplotData.max), text: "Max" },
+                { value: boxplotData.q3, y: y(boxplotData.q3), text: "Q3" },
+                { value: boxplotData.median, y: y(boxplotData.median), text: "Médiane" },
+                { value: boxplotData.q1, y: y(boxplotData.q1), text: "Q1" },
+                { value: boxplotData.min, y: y(boxplotData.min), text: "Min" }
+            ];
+
+            labels.forEach(label => {
+                svg.append("text")
+                    .attr("x", boxX + boxWidth + 10)
+                    .attr("y", label.y)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", "start")
+                    .attr("fill", "var(--text-color)")
+                    .attr("font-size", "12px")
+                    .text(`${label.text} (${label.value})`);
+            });
+        }
+
+        // Générer le graphique de l'espérance de vie
+        function generateLifeExpectancyChart() {
+            const { width, height } = getChartDimensions().barChart;
+            const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#lifeExpectancyChart").selectAll("*").remove();
+
+            const svg = d3.select("#lifeExpectancyChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(lifeExpectancyData.map(d => d.continent))
+                .range([0, innerWidth])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(lifeExpectancyData, d => Math.max(d.male, d.female)) + 5])
+                .range([innerHeight, 0]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .attr("text-anchor", "end")
+                .attr("font-size", "11px");
+
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            // Barres pour les hommes
+            svg.selectAll(".bar-male")
+                .data(lifeExpectancyData)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-male")
+                .attr("x", d => x(d.continent))
+                .attr("y", d => y(d.male))
+                .attr("width", x.bandwidth() / 2)
+                .attr("height", d => innerHeight - y(d.male))
+                .attr("fill", "#007bff");
+
+            // Barres pour les femmes
+            svg.selectAll(".bar-female")
+                .data(lifeExpectancyData)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-female")
+                .attr("x", d => x(d.continent) + x.bandwidth() / 2)
+                .attr("y", d => y(d.female))
+                .attr("width", x.bandwidth() / 2)
+                .attr("height", d => innerHeight - y(d.female))
+                .attr("fill", "#ff69b4");
+
+            // Légende
+            svg.append("text")
+                .attr("x", innerWidth - 100)
+                .attr("y", -10)
+                .attr("fill", "#007bff")
+                .attr("font-size", "12px")
+                .text("Hommes");
+
+            svg.append("text")
+                .attr("x", innerWidth - 100)
+                .attr("y", 10)
+                .attr("fill", "#ff69b4")
+                .attr("font-size", "12px")
+                .text("Femmes");
+        }
+
+        // Générer le graphique du taux de fertilité
+        function generateFertilityChart() {
+            const { width, height } = getChartDimensions().barChart;
+            const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#fertilityChart").selectAll("*").remove();
+
+            const svg = d3.select("#fertilityChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(fertilityData.map(d => d.continent))
+                .range([0, innerWidth])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(fertilityData, d => d.rate) + 1])
+                .range([innerHeight, 0]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .attr("text-anchor", "end")
+                .attr("font-size", "11px");
+
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            // Barres pour le taux de fertilité
+            svg.selectAll(".bar-fertility")
+                .data(fertilityData)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-fertility")
+                .attr("x", d => x(d.continent))
+                .attr("y", d => y(d.rate))
+                .attr("width", x.bandwidth())
+                .attr("height", d => innerHeight - y(d.rate))
+                .attr("fill", "#28a745");
+
+            // Ajouter les étiquettes de tendance
+            svg.selectAll(".trend-text")
+                .data(fertilityData)
+                .enter()
+                .append("text")
+                .attr("class", "trend-text")
+                .attr("x", d => x(d.continent) + x.bandwidth() / 2)
+                .attr("y", d => y(d.rate) - 5)
+                .attr("text-anchor", "middle")
+                .attr("fill", d => d.trend < 0 ? "#dc3545" : "#28a745")
+                .attr("font-size", "10px")
+                .text(d => d.trend < 0 ? `⬇️ ${Math.abs(d.trend)}` : `⬆️ ${d.trend}`);
+        }
+
+        // Générer le graphique de la répartition par âge
+        function generateAgeDistributionChart() {
+            const { width, height } = getChartDimensions().barChart;
+            const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#ageDistributionChart").selectAll("*").remove();
+
+            const svg = d3.select("#ageDistributionChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(ageDistributionData.map(d => d.continent))
+                .range([0, innerWidth])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, 100])
+                .range([innerHeight, 0]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .attr("text-anchor", "end")
+                .attr("font-size", "11px");
+
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            // Barres empilées pour la répartition par âge
+            const ageGroups = ["age0_14", "age15_64", "age65plus"];
+            const colors = ["#007bff", "#28a745", "#ffc107"];
+
+            ageGroups.forEach((group, i) => {
+                svg.selectAll(`.bar-${group}`)
+                    .data(ageDistributionData)
+                    .enter()
+                    .append("rect")
+                    .attr("class", `bar-${group}`)
+                    .attr("x", d => x(d.continent))
+                    .attr("y", d => {
+                        let y0 = 0;
+                        for (let j = 0; j < i; j++) {
+                            y0 += d[ageGroups[j]];
+                        }
+                        return y(y0 + d[group]);
+                    })
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => {
+                        const y0 = ageGroups.slice(0, i).reduce((sum, key) => sum + d[key], 0);
+                        return y(y0) - y(y0 + d[group]);
+                    })
+                    .attr("fill", colors[i]);
+            });
+
+            // Légende
+            svg.append("text")
+                .attr("x", innerWidth - 120)
+                .attr("y", -10)
+                .attr("fill", "#007bff")
+                .attr("font-size", "12px")
+                .text("0-14 ans");
+
+            svg.append("text")
+                .attr("x", innerWidth - 120)
+                .attr("y", 10)
+                .attr("fill", "#28a745")
+                .attr("font-size", "12px")
+                .text("15-64 ans");
+
+            svg.append("text")
+                .attr("x", innerWidth - 120)
+                .attr("y", 30)
+                .attr("fill", "#ffc107")
+                .attr("font-size", "12px")
+                .text("65+ ans");
+        }
+
+        // Générer le graphique de la croissance démographique
+        function generateGrowthChart() {
+            const { width, height } = getChartDimensions().barChart;
+            const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            d3.select("#growthChart").selectAll("*").remove();
+
+            const svg = d3.select("#growthChart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(growthData.map(d => d.continent))
+                .range([0, innerWidth])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(growthData, d => d.growth) + 5])
+                .range([innerHeight, 0]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .attr("text-anchor", "end")
+                .attr("font-size", "11px");
+
+            svg.append("g")
+                .call(d3.axisLeft(y))
+                .selectAll("text")
+                .attr("font-size", "12px");
+
+            // Barres pour la croissance
+            svg.selectAll(".bar-growth")
+                .data(growthData)
+                .enter()
+                .append("rect")
+                .attr("class", "bar-growth")
+                .attr("x", d => x(d.continent))
+                .attr("y", d => y(d.growth))
+                .attr("width", x.bandwidth())
+                .attr("height", d => innerHeight - y(d.growth))
+                .attr("fill", "#17a2b8");
+
+            // Ajouter les étiquettes de taux annuel
+            svg.selectAll(".growth-text")
+                .data(growthData)
+                .enter()
+                .append("text")
+                .attr("class", "growth-text")
+                .attr("x", d => x(d.continent) + x.bandwidth() / 2)
+                .attr("y", d => y(d.growth) - 5)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#ffffff")
+                .attr("font-size", "10px")
+                .text(d => `${d.annualRate}%`);
+        }
+
+        // Changer d'onglet
+        function showTab(event, tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            // Régénérer les graphiques pour s'adapter à la taille actuelle
+            if (tabName === 'pyramid') {
+                generatePyramid();
+            } else if (tabName === 'boxplot') {
+                generateBoxplot();
+            }
+        }
+
+        // Changer de thème
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Charger le thème sauvegardé et générer les graphiques
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            generatePyramid();
+            generateBoxplot();
+            generateLifeExpectancyChart();
+            generateFertilityChart();
+            generateAgeDistributionChart();
+            generateGrowthChart();
+        });
+
+        // Réajuster les graphiques lors du redimensionnement de la fenêtre
+        window.addEventListener('resize', () => {
+            if (document.getElementById('pyramid').classList.contains('active')) {
+                generatePyramid();
+            }
+            if (document.getElementById('boxplot').classList.contains('active')) {
+                generateBoxplot();
+            }
+            generateLifeExpectancyChart();
+            generateFertilityChart();
+            generateAgeDistributionChart();
+            generateGrowthChart();
+        });
+    </script>
+</body>
+</html>
